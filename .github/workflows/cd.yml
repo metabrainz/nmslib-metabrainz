@@ -16,7 +16,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        os: [macOS-15]
+        os: [windows-2019]
         #os: [ubuntu-20.04, windows-2019, macOS-15]
 
     steps:
@@ -31,8 +31,8 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel python_bindings
         env: 
-          CIBW_BUILD: cp310-macosx_x86_64
-#CIBW_BUILD: cp310-win_amd64
+          CIBW_BUILD: cp310-win_amd64
+#CIBW_BUILD: cp310-macosx_x86_64
 #CIBW_SKIP: cp37-manylinux_x86_64
 
       - name: Publish package
