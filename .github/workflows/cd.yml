@@ -1,6 +1,7 @@
 name: Continuous Delivery
 
 on:
+  workflow_dispatch:
   push:
   release:
     types: [published]
@@ -30,7 +31,7 @@ jobs:
         with:
           name: nmslib_metabrainz-wheels-${{ runner.os }}
           path: wheelhouse/*.whl
-  
+
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
