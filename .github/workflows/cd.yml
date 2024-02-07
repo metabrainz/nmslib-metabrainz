@@ -31,8 +31,8 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel python_bindings
         env: 
-          CIBW_BUILD: "cp39-manylinux_x86_64"
-#          CIBW_SKIP: "cp35-manylinux_x86_64 cp36-manylinux_x86_64 cp37-manylinux_x86_64 cp38-manylinux_x86_64"
+          #CIBW_BUILD: "cp39-manylinux_x86_64"
+          CIBW_SKIP: "cp35-* cp36-* cp37-*"
 
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
