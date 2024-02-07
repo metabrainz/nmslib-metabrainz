@@ -12,11 +12,11 @@ if sys.platform.startswith("win") and struct.calcsize("P") * 8 == 32:
     raise RuntimeError("Windows 32-bit is not supported.")
 
 dep_list = ['pybind11>=2.2.3', 'psutil']
-dep_list.append("numpy>=1.10.0 ; python_version>='3.5'")
+dep_list.append("numpy>=1.26.4 ; python_version>='3.8'")
 
 py_version = tuple([int(s) for s in platform.python_version().split('.')])[0:2]
-if py_version != (2, 7) and py_version < (3, 5):
-    raise RuntimeError("Python version 2.7 or >=3.5 required.")
+if py_version < (3, 9):
+    raise RuntimeError("Python version >=3.9 required.")
 
 print('Dependence list:', dep_list)
 
