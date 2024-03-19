@@ -63,8 +63,8 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nmslib_metabrainz-wheels-${{ runner.os }}
-          path: wheelhouse/nmslib*.whl
+          name: nmslib_metabrainz-wheels-macos-${{ matrix.python-version }}
+          path: python_bindings/wheelhouse/nmslib*.whl
 
   build_sdist:
     name: Build source distribution
