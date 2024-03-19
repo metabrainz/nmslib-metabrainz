@@ -40,9 +40,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Build wheels
         run: |
           pip3 install -r dev-requirements.txt
@@ -50,10 +52,13 @@ jobs:
           pip3 wheel . -w wheelhouse
         env:
           CFLAGS: '-mavx'
+        working-directory: python_bindings
+
       - name: Test wheels
         run: |
           pip3 install nmslib-metabrainz --no-index -f wheelhouse
           python3 -m pytest tests/bindings_test.py
+        working-directory: python_bindings
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
