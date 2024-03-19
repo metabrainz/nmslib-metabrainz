@@ -1,7 +1,6 @@
 name: Continuous Delivery
 
 on:
-  workflow_dispatch:
   push:
   release:
     types: [published]
@@ -63,7 +62,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: nmslib_metabrainz-wheels-macos-${{ matrix.python-version }}
+          name: nmslib_metabrainz-wheels-macos-python-${{ matrix.python-version }}
           path: python_bindings/wheelhouse/nmslib*.whl
 
   build_sdist:
