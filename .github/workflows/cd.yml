@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-2019]
-        # os: [ubuntu-20.04, windows-2019, macOS-12]
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +29,42 @@ jobs:
         with:
           name: nmslib_metabrainz-wheels-${{ runner.os }}
           path: wheelhouse/*.whl
-  
+
+  build_wheels_macos:
+    name: Build wheels on macos-latest (Python ${{ matrix.python-version }})
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [ '3.9', '3.10', '3.11', '3.12' ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build wheels
+        run: |
+          pip3 install -r dev-requirements.txt
+          python3 setup.py build_ext
+          pip3 wheel . -w wheelhouse
+        env:
+          CFLAGS: '-mavx'
+        working-directory: python_bindings
+
+      - name: Test wheels
+        run: |
+          pip3 install nmslib-metabrainz --no-index -f wheelhouse
+          python3 -m pytest tests/bindings_test.py
+        working-directory: python_bindings
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmslib_metabrainz-wheels-macos-python-${{ matrix.python-version }}
+          path: python_bindings/wheelhouse/nmslib*.whl
+
   build_sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
@@ -47,7 +81,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist, build_wheels_macos]
     environment:
       name: pypi
       url: https://pypi.org/p/nmslib-metabrainz
