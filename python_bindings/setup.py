@@ -6,7 +6,7 @@ import setuptools
 import struct
 import platform
 
-__version__ = '2.1.2'
+__version__ = '2.1.3'
 
 if sys.platform.startswith("win") and struct.calcsize("P") * 8 == 32:
     raise RuntimeError("Windows 32-bit is not supported.")
