@@ -169,6 +169,41 @@ void SimplInvIndex<dist_t>::SaveIndex(const string& location) {
   output.close();
 }
 
+template <typename T>
+void writeBinaryPODToVector(vector<uint8_t> &data, const T& podRef) {
+  long unsigned int i;
+  for(char *ptr = (char*)&podRef, i = 0; i < sizeof(T); i++, ptr++) {
+      data.push_back(*ptr);
+  }
+}
+
+template <typename dist_t>
+void SimplInvIndex<dist_t>::SerializeIndex(vector<uint8_t> &serial, const ObjectVector &objects) {
+
+  size_t entryQty = index_.size(); 
+  writeBinaryPODToVector(serial, entryQty);
+
+  for (const auto & e: index_) {
+    uint32_t elemId = e.first;
+    writeBinaryPODToVector(serial, elemId);
+    const PostList& pl = *e.second;
+    writeBinaryPODToVector(serial, pl.qty_);
+    for (size_t i = 0; i < pl.qty_; i++) {
+      const PostEntry& e = pl.entries_[i];
+      writeBinaryPODToVector(serial, e.doc_id_);
+      writeBinaryPODToVector(serial, e.val_);
+    }
+  }
+  writeBinaryPODToVector(serial, size_t(objects.size()));
+  for (unsigned i = 0; i < objects.size(); i++) {
+    const Object* o = objects[i];
+    writeBinaryPODToVector(serial, o->bufferlength());
+    const char *ptr = o->buffer(); 
+    for(int i = 0; i < o->bufferlength(); i++, ptr++)
+      serial.push_back(*ptr);
+  }
+}
+
 template <typename dist_t>
 void SimplInvIndex<dist_t>::LoadIndex(const string& location) {
   std::ifstream input(location, std::ios::binary);
@@ -203,6 +238,89 @@ void SimplInvIndex<dist_t>::LoadIndex(const string& location) {
     index_.insert(make_pair(wordId, unique_ptr<PostList>(pl.release())));
   }
 }
+
+template <typename T>
+static char *readBinaryPODFromVector(char *in_ptr, T& podRef) {
+  char *out_ptr;
+  long unsigned int i;
+  for(i = 0, out_ptr = (char *)&podRef; i < sizeof(T); i++, in_ptr++, out_ptr++) {
+      *out_ptr = *in_ptr;
+  }
+
+  return in_ptr;
+}
+
+template <typename dist_t>
+unique_ptr<DataFileInputState>
+Space<dist_t>::ReadObjectVectorFromBinData(ObjectVector& data,
+                                           vector<string>& vExternIds,
+                                           const std::string& fileName,
+                                           const IdTypeUnsign maxQty) const {
+  CHECK_MSG(data.empty(), "this function expects data to be empty on call");
+  size_t qty;
+  size_t objSize;
+  std::ifstream input(fileName, std::ios::binary);
+  CHECK_MSG(input, "Cannot open file '" + fileName + "' for reading");
+  input.exceptions(std::ios::badbit | std::ios::failbit);
+  vExternIds.clear();
+
+  readBinaryPOD(input, qty);
+
+  for (unsigned i = 0; i < std::min(qty, size_t(maxQty)); ++i) {
+    readBinaryPOD(input, objSize);
+    unique_ptr<char []> buf(new char[objSize]);
+    input.read(&buf[0], objSize);
+    // true guarantees that the Object will take ownership of memory
+    // less than ideal, but ok for now
+    data.push_back(new Object(buf.release(), true));
+  }
+  
+  return unique_ptr<DataFileInputState>(new DataFileInputState());
+}
+
+template <typename dist_t>
+void SimplInvIndex<dist_t>::UnserializeIndex(vector<uint8_t> &data, ObjectVector &objects) {
+
+  index_.clear();
+  size_t entryQty = 0;
+
+  char *input = (char *)data.data();
+  input = readBinaryPODFromVector(input, entryQty);
+
+  index_.clear();
+
+  for (size_t qi = 0; qi < entryQty; qi++) {
+    uint32_t wordId = 0;
+    input = readBinaryPODFromVector(input, wordId);
+    size_t postQty = 0;
+    input = readBinaryPODFromVector(input, postQty);
+    auto pl = unique_ptr<PostList>(new PostList(postQty));
+    for (size_t pi = 0; pi < postQty; pi++) {
+      PostEntry& e = pl->entries_[pi];
+      input = readBinaryPODFromVector(input, e.doc_id_);
+      input = readBinaryPODFromVector(input, e.val_);
+    }
+    index_.insert(make_pair(wordId, unique_ptr<PostList>(pl.release())));
+  }
+
+  size_t num_objects;
+  input = readBinaryPODFromVector(input, num_objects);
+  for (unsigned i = 0; i < num_objects; ++i) {
+    size_t objSize;
+    input = readBinaryPODFromVector(input, objSize);
+    unique_ptr<char []> buf(new char[objSize]);
+    memcpy(&buf[0], input, objSize);
+    input += objSize;
+    // true guarantees that the Object will take ownership of memory
+    // less than ideal, but ok for now
+    objects.push_back(new Object(buf.release(), true));
+  }
+
+  // Remove the data we consumed from the vect
+  int difference = input - (char *)data.data();
+  data.erase(data.begin(), data.begin() + difference);
+}
+
 
 template <typename dist_t>
 void SimplInvIndex<dist_t>::CreateIndex(const AnyParams& IndexParams) {
