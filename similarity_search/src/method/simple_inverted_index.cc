@@ -14,6 +14,7 @@
  */
 #include <unordered_map>
 #include <queue>
+#include <cmath>
 
 #include "space.h"
 #include "knnquery.h"
@@ -115,7 +116,11 @@ void SimplInvIndex<dist_t>::Search(KNNQuery<dist_t>* query, IdType) const {
     // This one seems to be a bit faster
     // DAVID: THIS CONSTRUCTION IS WRONG. DUE TO THE FIRST CONDITION, THERE MIGHT BE MORE THAN K DOCUMENTS IN THE
     // RESULT, RIGHT? BUT THE SECOND FORK ONLY REPLACES ONE OF THE "WORST" DOCUMENTS
-    if (tmpResQueue.size() < K || tmpResQueue.top_key() == negAccum)
+    // NOTE: Use epsilon comparison to handle floating point precision differences that can occur
+    // with compiler optimizations (especially -O3). Without this, equal-score documents may be
+    // incorrectly rejected when their computed scores differ by tiny amounts due to FP arithmetic.
+    constexpr dist_t epsilon = 1e-7f;  // Small epsilon for float comparison
+    if (tmpResQueue.size() < K || std::abs(tmpResQueue.top_key() - negAccum) < epsilon)
       tmpResQueue.push(negAccum, -minDocIdNeg);
     else if (tmpResQueue.top_key() > negAccum)
       tmpResQueue.replace_top(negAccum, -minDocIdNeg);
